@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI CHATBOT 3 Claude AI</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Amiri&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+        rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-c"></i>
+                </div>
+                <div class="app-title">Claude</div>
+                <button class="sidebar-close-btn" id="sidebarCloseBtn" title="Close sidebar">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <!-- New Chat Button -->
+            <button class="new-chat-btn" id="newChatBtn">
+                <i class="fa-regular fa-pen-to-square"></i>
+                <span class="btn-text">New chat</span>
+            </button>
+
+            <!-- Chat History Search -->
+            <div class="search-container">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="searchChats" placeholder="Search chats..." class="search-input" />
+            </div>
+
+            <!-- Chat List -->
+            <div class="chat-list" id="chatList">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span>Today</span>
+                        <button class="section-toggle">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <!-- Dynamic chat items -->
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span>Yesterday</span>
+                        <button class="section-toggle">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <!-- Dynamic chat items -->
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span>Previous 7 Days</span>
+                        <button class="section-toggle">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <!-- Dynamic chat items -->
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-menu-item" id="settingsBtn">
+                    <i class="fa-solid fa-gear"></i>
+                    <span class="menu-text">Settings</span>
+                </div>
+
+                <div class="sidebar-menu-item" id="helpBtn">
+                    <i class="fa-regular fa-circle-question"></i>
+                    <span class="menu-text">Help & FAQ</span>
+                </div>
+
+                <div class="user-profile" id="userProfile">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">Pervez Alam</div>
+                        <div class="user-status">
+                            <span class="status-dot"></span>
+                            Free plan
+                        </div>
+                    </div>
+                    <button class="profile-menu-btn">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="chat-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="chat-info">
+                    <div class="chat-model">
+                        <i class="fa-solid fa-robot"></i>
+                        Claude 3.5 Sonnet
+                        <span class="model-badge">
+                            <i class="fa-solid fa-star"></i>
+                            PRO
+                        </span>
+                    </div>
+                </div>
+                <div class="upgrade-card">
+                    <div class="upgrade-icon">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="upgrade-content">
+                        <div class="upgrade-title">Upgrade</div>
+                        <div class="upgrade-text">Unlock advanced features</div>
+                    </div>
+                    <button class="upgrade-btn">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="regenerateBtn" title="Regenerate response">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    <button class="header-btn" id="shareBtn" title="Share chat">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                    <button class="header-btn" id="moreBtn" title="More options">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="messages-wrapper">
+                <div class="messages" id="messages">
+                    <!-- Empty State -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-icon">
+                            <i class="fa-solid fa-comments"></i>
+                        </div>
+                        <h1 class="empty-state-title">How can Claude help you today?</h1>
+                        <p class="empty-state-text">
+                            I'm Claude, an AI assistant created by Anthropic. I can help
+                            with writing, analysis, math, coding, and much more.
+                        </p>
+
+                        <!-- Suggestion Chips -->
+                        <div class="suggestion-chips">
+                            <div class="suggestion-chip" data-suggestion="Explain quantum computing in simple terms">
+                                <div class="chip-icon">
+                                    <i class="fa-solid fa-atom"></i>
+                                </div>
+                                <div class="chip-content">
+                                    <div class="suggestion-chip-title">Explain a concept</div>
+                                    <div class="suggestion-chip-text">
+                                        Like quantum computing
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="suggestion-chip" data-suggestion="Help me write a professional email">
+                                <div class="chip-icon">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </div>
+                                <div class="chip-content">
+                                    <div class="suggestion-chip-title">Write something</div>
+                                    <div class="suggestion-chip-text">
+                                        Draft an email or article
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="suggestion-chip" data-suggestion="Debug this Python code for me">
+                                <div class="chip-icon">
+                                    <i class="fa-solid fa-code"></i>
+                                </div>
+                                <div class="chip-content">
+                                    <div class="suggestion-chip-title">Code assistance</div>
+                                    <div class="suggestion-chip-text">Debug or write code</div>
+                                </div>
+                            </div>
+
+                            <div class="suggestion-chip" data-suggestion="Analyze this data and find trends">
+                                <div class="chip-icon">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </div>
+                                <div class="chip-content">
+                                    <div class="suggestion-chip-title">Analyze data</div>
+                                    <div class="suggestion-chip-text">
+                                        Find patterns and insights
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <button class="input-action-btn" id="attachBtn" title="Attach file">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+
+                        <textarea id="userInput" placeholder="Message Claude..." rows="1"></textarea>
+
+                        <div class="input-right-actions">
+                            <button class="input-action-btn" id="voiceBtn" title="Voice input">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <button class="send-btn" id="sendBtn">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-footer">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Claude can make mistakes. Please double-check responses.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-icon delete-icon">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="modal-header">Delete chat?</h3>
+            <p class="modal-body">
+                This will permanently delete this conversation. This action cannot be
+                undone.
+            </p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="cancelDeleteBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel
+                </button>
+                <button class="modal-btn danger" id="confirmDeleteBtn">
+                    <i class="fa-solid fa-trash"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content settings-modal">
+            <div class="modal-header-bar">
+                <h3 class="modal-header">Settings</h3>
+                <button class="modal-close-btn" id="closeSettingsBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <i class="fa-solid fa-moon"></i>
+                            <div>
+                                <div class="settings-item-title">Dark Mode</div>
+                                <div class="settings-item-desc">Toggle dark theme</div>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="darkModeToggle" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <i class="fa-solid fa-bell"></i>
+                            <div>
+                                <div class="settings-item-title">Notifications</div>
+                                <div class="settings-item-desc">
+                                    Enable desktop notifications
+                                </div>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notificationsToggle" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Custom JS -->
+    <script src="script.js"></script>
+</body>
+
+</html>
