@@ -998,15 +998,26 @@ body {
     margin-bottom: 5px;
 }
 .message.assistant {
-    background: #f9fafb;
-    border-radius: 12px;
-    padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message.user .message-time {
+  justify-content: flex-end;
 }
 .message.user .message-content {
+  flex: 0 1 auto;
+  max-width: min(75%, 640px);
   background: var(--bg-secondary);
   padding: 14px 18px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-primary);
+  overflow-wrap: anywhere;
 }
 
 .message-time {
@@ -1716,6 +1727,10 @@ body {
 
   .messages {
     padding: 24px 16px;
+  }
+
+  .message.user .message-content {
+    max-width: calc(100% - 52px);
   }
 
   .input-area {
