@@ -17,6 +17,7 @@ const state = {
 const elements = {
     // Sidebar
     sidebar: document.getElementById('sidebar'),
+    sidebarLogoToggle: document.getElementById('sidebarLogoToggle'),
     sidebarCloseBtn: document.getElementById('sidebarCloseBtn'),
     newChatBtn: document.getElementById('newChatBtn'),
     searchInput: document.getElementById('searchChats'),
@@ -35,6 +36,9 @@ const elements = {
     regenerateBtn: document.getElementById('regenerateBtn'),
     shareBtn: document.getElementById('shareBtn'),
     moreBtn: document.getElementById('moreBtn'),
+    moreMenu: document.getElementById('moreMenu'),
+    shareChatBtn: document.getElementById('shareChatBtn'),
+    pinChatBtn: document.getElementById('pinChatBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
     helpBtn: document.getElementById('helpBtn'),
 
@@ -50,9 +54,10 @@ const elements = {
     notificationsToggle: document.getElementById('notificationsToggle'),
 
     // Utilities
-    loadingOverlay: document.getElementById('loadingOverlay'),
-    toastContainer: document.getElementById('toastContainer')
+    loadingOverlay: document.getElementById('loadingOverlay')
 };
+
+const emptyStateTemplate = elements.emptyState ? elements.emptyState.outerHTML : '';
 
 // ========================================
 // UTILITY FUNCTIONS
@@ -127,51 +132,14 @@ function formatAIResponse(content) {
     return html;
 }
 // ========================================
-// TOAST NOTIFICATIONS
-// ========================================
-
-function showToast(type, title, message, duration = 3000) {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-
-    const icons = {
-        success: 'fa-circle-check',
-        error: 'fa-circle-xmark',
-        info: 'fa-circle-info',
-        warning: 'fa-triangle-exclamation'
-    };
-
-    toast.innerHTML = `
-        <i class="fa-solid ${icons[type]} toast-icon"></i>
-        <div class="toast-content">
-            <div class="toast-title">${title}</div>
-            ${message ? `<div class="toast-message">${message}</div>` : ''}
-        </div>
-        <button class="toast-close">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    `;
-
-    elements.toastContainer.appendChild(toast);
-
-    const closeBtn = toast.querySelector('.toast-close');
-    closeBtn.onclick = () => removeToast(toast);
-
-    if (duration > 0) {
-        setTimeout(() => removeToast(toast), duration);
-    }
-}
-
-function removeToast(toast) {
-    toast.classList.add('removing');
-    setTimeout(() => toast.remove(), 300);
-}
-
-// ========================================
 // CHAT MANAGEMENT
 // ========================================
 
 function createNewChat() {
+    state.chats = state.chats.filter(chat =>
+        chat.messages.length > 0 || chat.title !== 'New conversation'
+    );
+
     const chatId = generateId();
     const newChat = {
         id: chatId,
@@ -183,11 +151,18 @@ function createNewChat() {
     state.chats.unshift(newChat);
     state.currentChatId = chatId;
 
+    resetMessagesToEmptyState();
     showEmptyState();
     renderChatList();
-    elements.userInput.focus();
-
-    showToast('success', 'New chat created', 'Start a conversation');
+    if (elements.userInput) {
+        elements.userInput.value = '';
+        elements.userInput.style.height = 'auto';
+        elements.userInput.focus();
+    }
+    if (elements.sendBtn) {
+        elements.sendBtn.classList.remove('active');
+    }
+    closeMoreMenu();
 
     // Close sidebar on mobile
     if (state.isMobile) {
@@ -204,6 +179,7 @@ function loadChat(chatId) {
     hideEmptyState();
 
     elements.messagesContainer.innerHTML = '';
+    elements.emptyState = null;
     chat.messages.forEach(msg => {
         appendMessage(msg.role, msg.content, msg.time, false);
     });
@@ -225,7 +201,6 @@ function renameChat(chatId) {
     if (newTitle && newTitle.trim()) {
         chat.title = newTitle.trim();
         renderChatList();
-        showToast('success', 'Chat renamed', '');
     }
 }
 
@@ -236,7 +211,6 @@ function deleteChat(chatId) {
 
 function confirmDelete() {
     if (state.chatToDelete) {
-        const chatTitle = state.chats.find(c => c.id === state.chatToDelete)?.title || 'Chat';
         state.chats = state.chats.filter(c => c.id !== state.chatToDelete);
 
         if (state.currentChatId === state.chatToDelete) {
@@ -248,7 +222,6 @@ function confirmDelete() {
         }
 
         renderChatList();
-        showToast('success', 'Chat deleted', chatTitle);
     }
     hideModal(elements.deleteModal);
 }
@@ -264,7 +237,11 @@ function renderChatList() {
         week: []
     };
 
-    state.chats.forEach(chat => {
+    const visibleChats = state.chats.filter(chat =>
+        chat.messages.length > 0 || chat.title !== 'New conversation'
+    ).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
+
+    visibleChats.forEach(chat => {
         const period = getChatDate(chat.timestamp);
         if (sections[period]) {
             sections[period].push(chat);
@@ -307,6 +284,7 @@ function createChatItem(chat) {
     div.innerHTML = `
         <i class="fa-regular fa-message chat-item-icon"></i>
         <div class="chat-item-title">${escapeHtml(chat.title)}</div>
+        ${chat.pinned ? '<i class="fa-solid fa-thumbtack chat-item-pin" title="Pinned"></i>' : ''}
         <div class="chat-item-actions">
             <button class="chat-item-btn rename-btn" title="Rename">
                 <i class="fa-solid fa-pen"></i>
@@ -392,7 +370,7 @@ async function sendMessage() {
         }
     } catch (err) {
         response = "Sorry, I couldn't get a response right now.";
-        showToast('error', 'Bot reply failed', 'Check server /chat endpoint');
+        console.warn('Bot reply failed. Check server /chat endpoint.', err);
     } finally {
         hideTypingIndicator();
     }
@@ -482,13 +460,12 @@ function copyMessage(btn, content) {
             <i class="fa-solid fa-check"></i>
             Copied!
         `;
-        showToast('success', 'Copied to clipboard', '');
 
         setTimeout(() => {
             btn.innerHTML = originalHTML;
         }, 2000);
     }).catch(() => {
-        showToast('error', 'Failed to copy', 'Please try again');
+        console.warn('Failed to copy message.');
     });
 }
 
@@ -523,13 +500,29 @@ function hideTypingIndicator() {
 // UI STATE MANAGEMENT
 // ========================================
 
+function refreshEmptyStateReference() {
+    elements.emptyState = document.getElementById('emptyState');
+}
+
+function resetMessagesToEmptyState() {
+    if (!elements.messagesContainer || !emptyStateTemplate) return;
+    elements.messagesContainer.innerHTML = emptyStateTemplate;
+    refreshEmptyStateReference();
+}
+
 function showEmptyState() {
+    refreshEmptyStateReference();
+    if (!elements.emptyState && emptyStateTemplate) {
+        resetMessagesToEmptyState();
+    }
+
     if (elements.emptyState) {
         elements.emptyState.style.display = 'block';
     }
 }
 
 function hideEmptyState() {
+    refreshEmptyStateReference();
     if (elements.emptyState) {
         elements.emptyState.style.display = 'none';
     }
@@ -538,7 +531,7 @@ function hideEmptyState() {
 function toggleSidebar() {
     if (state.isMobile) {
         elements.sidebar.classList.toggle('active');
-    } else {
+     } else {
         state.sidebarCollapsed = !state.sidebarCollapsed;
         elements.sidebar.classList.toggle('collapsed');
     }
@@ -548,6 +541,76 @@ function closeSidebar() {
     if (state.isMobile) {
         elements.sidebar.classList.remove('active');
     }
+}
+
+function closeMoreMenu() {
+    if (elements.moreMenu) {
+        elements.moreMenu.classList.remove('open');
+    }
+    if (elements.moreBtn) {
+        elements.moreBtn.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function updateMoreMenuState() {
+    if (!elements.pinChatBtn) return;
+
+    const currentChat = state.chats.find(chat => chat.id === state.currentChatId);
+    const isPinned = Boolean(currentChat && currentChat.pinned);
+    elements.pinChatBtn.classList.toggle('active', isPinned);
+
+    const label = elements.pinChatBtn.querySelector('span');
+    if (label) {
+        label.textContent = isPinned ? 'Unpin' : 'Pin';
+    }
+}
+
+function toggleMoreMenu(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    if (!elements.moreMenu || !elements.moreBtn) return;
+
+    const isOpen = elements.moreMenu.classList.toggle('open');
+    elements.moreBtn.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) {
+        updateMoreMenuState();
+    }
+}
+
+function getCurrentChatShareText() {
+    const currentChat = state.chats.find(chat => chat.id === state.currentChatId);
+    if (!currentChat || currentChat.messages.length === 0) {
+        return 'New HelpGPT conversation';
+    }
+
+    return currentChat.messages
+        .map(message => `${message.role === 'user' ? 'You' : 'HelpGPT'}: ${message.content}`)
+        .join('\n\n');
+}
+
+async function shareCurrentChat() {
+    closeMoreMenu();
+    const text = getCurrentChatShareText();
+
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'HelpGPT chat', text });
+        } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+        }
+    } catch (error) {
+        console.warn('Share action was cancelled or failed.', error);
+    }
+}
+
+function togglePinCurrentChat() {
+    const currentChat = state.chats.find(chat => chat.id === state.currentChatId);
+    if (!currentChat) return;
+
+    currentChat.pinned = !currentChat.pinned;
+    updateMoreMenuState();
+    renderChatList();
 }
 
 function showModal(modal) {
@@ -594,21 +657,28 @@ function searchChats(query) {
 // EVENT LISTENERS
 // ========================================
 
+function addSafeListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+    }
+}
+
 // Sidebar
-elements.menuToggle.addEventListener('click', toggleSidebar);
-elements.sidebarCloseBtn.addEventListener('click', toggleSidebar);
-elements.newChatBtn.addEventListener('click', createNewChat);
+addSafeListener(elements.sidebarLogoToggle, 'click', toggleSidebar);
+addSafeListener(elements.menuToggle, 'click', toggleSidebar);
+addSafeListener(elements.sidebarCloseBtn, 'click', toggleSidebar);
+addSafeListener(elements.newChatBtn, 'click', createNewChat);
 
 // Search
-elements.searchInput.addEventListener('input', (e) => {
+addSafeListener(elements.searchInput, 'input', (e) => {
     searchChats(e.target.value);
 });
 
 // Send message
-elements.sendBtn.addEventListener('click', sendMessage);
+addSafeListener(elements.sendBtn, 'click', sendMessage);
 
 // Input handling
-elements.userInput.addEventListener('input', function () {
+addSafeListener(elements.userInput, 'input', function () {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 200) + 'px';
 
@@ -619,7 +689,7 @@ elements.userInput.addEventListener('input', function () {
     }
 });
 
-elements.userInput.addEventListener('keydown', function (e) {
+addSafeListener(elements.userInput, 'keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
@@ -627,66 +697,60 @@ elements.userInput.addEventListener('keydown', function (e) {
 });
 
 // Buttons
-elements.shareBtn.addEventListener('click', () => {
-    showToast('info', 'Share feature', 'Coming soon!');
-});
+addSafeListener(elements.moreBtn, 'click', toggleMoreMenu);
+addSafeListener(elements.shareChatBtn, 'click', shareCurrentChat);
+addSafeListener(elements.pinChatBtn, 'click', togglePinCurrentChat);
+addSafeListener(elements.shareBtn, 'click', shareCurrentChat);
 
-elements.regenerateBtn.addEventListener('click', () => {
-    showToast('info', 'Regenerate', 'Feature coming soon!');
-});
+addSafeListener(elements.regenerateBtn, 'click', () => {});
+addSafeListener(elements.attachBtn, 'click', () => {});
+addSafeListener(elements.voiceBtn, 'click', () => {});
 
-elements.attachBtn.addEventListener('click', () => {
-    showToast('info', 'File attachment', 'Coming soon!');
-});
-
-elements.voiceBtn.addEventListener('click', () => {
-    showToast('info', 'Voice input', 'Coming soon!');
-});
-
-elements.settingsBtn.addEventListener('click', () => {
+addSafeListener(elements.settingsBtn, 'click', () => {
     showModal(elements.settingsModal);
 });
 
-elements.helpBtn.addEventListener('click', () => {
-    showToast('info', 'Help & FAQ', 'Visit our help center');
+addSafeListener(elements.helpBtn, 'click', () => {
+    closeMoreMenu();
 });
 
 // Modals
-elements.cancelDeleteBtn.addEventListener('click', () => {
+addSafeListener(elements.cancelDeleteBtn, 'click', () => {
     hideModal(elements.deleteModal);
 });
 
-elements.confirmDeleteBtn.addEventListener('click', confirmDelete);
+addSafeListener(elements.confirmDeleteBtn, 'click', confirmDelete);
 
-elements.closeSettingsBtn.addEventListener('click', () => {
+addSafeListener(elements.closeSettingsBtn, 'click', () => {
     hideModal(elements.settingsModal);
 });
 
 // Modal overlay clicks
-elements.deleteModal.addEventListener('click', (e) => {
+addSafeListener(elements.deleteModal, 'click', (e) => {
     if (e.target === elements.deleteModal || e.target.classList.contains('modal-overlay')) {
         hideModal(elements.deleteModal);
     }
 });
 
-elements.settingsModal.addEventListener('click', (e) => {
+addSafeListener(elements.settingsModal, 'click', (e) => {
     if (e.target === elements.settingsModal || e.target.classList.contains('modal-overlay')) {
         hideModal(elements.settingsModal);
     }
 });
 
 // Settings toggles
-elements.darkModeToggle.addEventListener('change', function () {
+addSafeListener(elements.darkModeToggle, 'change', function () {
     document.body.classList.toggle('dark-mode', this.checked);
-    showToast('success', 'Theme updated', this.checked ? 'Dark mode enabled' : 'Light mode enabled');
 });
 
-elements.notificationsToggle.addEventListener('change', function () {
-    showToast('info', 'Notifications', this.checked ? 'Enabled' : 'Disabled');
-});
+addSafeListener(elements.notificationsToggle, 'change', function () {});
 
 // Suggestion chips
 document.addEventListener('click', (e) => {
+    if (elements.moreMenu && !e.target.closest('.more-menu-wrapper')) {
+        closeMoreMenu();
+    }
+
     const chip = e.target.closest('.suggestion-chip');
     if (chip) {
         const suggestion = chip.getAttribute('data-suggestion');
@@ -699,6 +763,12 @@ document.addEventListener('click', (e) => {
             elements.userInput.style.height = 'auto';
             elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 200) + 'px';
         }
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeMoreMenu();
     }
 });
 
@@ -717,6 +787,9 @@ window.addEventListener('resize', () => {
 
     if (!state.isMobile) {
         elements.sidebar.classList.remove('active');
+    } else {
+        elements.sidebar.classList.remove('collapsed');
+        state.sidebarCollapsed = false;
     }
 });
 
@@ -734,12 +807,7 @@ function init() {
     // Create initial chat
     createNewChat();
 
-    // Welcome toast
-    setTimeout(() => {
-        showToast('info', 'Welcome to Claude!', 'Start a conversation or choose a suggestion');
-    }, 500);
-
-    console.log('Claude AI Clone initialized successfully! 🚀');
+    console.log('HelpGPT initialized successfully.');
 }
 
 // Initialize when DOM is ready
