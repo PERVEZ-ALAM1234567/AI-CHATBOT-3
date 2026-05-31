@@ -10,6 +10,8 @@ A responsive AI chatbot with an intelligent conversational platform engineered w
 
 ![Demo](./images/screenshoot1.png)
 
+---
+
 ![Demo](./images/screenshoot2.png)
 
 ## Features
